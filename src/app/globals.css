@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* ── Design tokens ───────────────────────────────────────────
+   Bone and emerald with brass: light and airy, like a salon with
+   good daylight and green velvet chairs. */
+@theme {
+  --color-bone: #F3EEE6;        /* page background */
+  --color-linen: #E8E0D3;       /* soft panels and lines on bone */
+  --color-ink: #1B1A17;         /* body text */
+  --color-emerald: #0E2A23;     /* deep sections, primary buttons */
+  --color-emerald-soft: #1C4237;
+  --color-brass: #B08D57;       /* accents, the crown */
+  --color-brass-light: #D9C08F; /* brass on emerald */
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-hanken), system-ui, sans-serif;
+
+  --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html { background: var(--color-bone); }
+  body {
+    background: var(--color-bone);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Fraunces: a little softer than default, never wonky */
+  .font-display { font-variation-settings: "SOFT" 50, "WONK" 0; }
+  ::selection { background: var(--color-brass-light); color: var(--color-emerald); }
+  :focus-visible { outline: 2px solid var(--color-brass); outline-offset: 3px; }
+}
+
+/* Buttons stay in the components layer so Tailwind utilities (like `hidden`) still win */
+@layer components {
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+    min-height: 3.1rem; padding: 0 1.6rem; border-radius: 999px;
+    font-size: 0.95rem; font-weight: 500; letter-spacing: 0.01em; white-space: nowrap;
+    transition: background-color .35s var(--ease-calm), color .35s, border-color .35s, transform .35s var(--ease-calm);
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-emerald { background: var(--color-emerald); color: var(--color-bone); }
+  .btn-emerald:hover { background: var(--color-emerald-soft); }
+  .btn-brass { background: var(--color-brass-light); color: var(--color-emerald); }
+  .btn-brass:hover { background: #E6D2A8; }
+  .btn-line { border: 1px solid currentColor; }
+  .btn-line:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+}
+
+/* The crown over the é draws itself once when the page opens */
+.crown-draw path, .crown-draw circle {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  animation: crown-draw 1.6s var(--ease-calm) 0.3s forwards;
+}
+@keyframes crown-draw { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .crown-draw path, .crown-draw circle { animation: none; stroke-dashoffset: 0; }
+  .btn { transition: none; }
+  .btn:hover { transform: none; }
+}
