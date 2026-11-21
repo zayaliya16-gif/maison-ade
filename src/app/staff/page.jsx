@@ -109,7 +109,7 @@ export default async function StaffDiary({ searchParams }) {
         {/* Add time off */}
         <section aria-labelledby="off-title" className="mt-14 max-w-[46rem] rounded-[14px] border border-linen bg-white/40 p-5 sm:p-6">
           <h2 id="off-title" className="font-display text-2xl text-emerald">Add time off</h2>
-          <p className="mt-1 text-sm text-ink/60">Holidays, sick days or blocked hours. Leave the times blank for whole days.</p>
+          <p className="mt-1 text-sm text-ink/60">Holidays, sick days or blocked hours. Keep “Start of day” and “End of day” for whole days.</p>
           <form action={addTimeOffAction} className="mt-5 grid gap-4 sm:grid-cols-2">
             <input type="hidden" name="returnDate" value={date} />
             <label className="text-sm text-ink/70 sm:col-span-2">Stylist
@@ -120,14 +120,14 @@ export default async function StaffDiary({ searchParams }) {
             <label className="text-sm text-ink/70">From date
               <input type="date" name="startDate" required defaultValue={date} className="mt-1.5 block h-11 w-full rounded-[10px] border border-linen bg-white/80 px-3 text-[1rem] text-ink" />
             </label>
-            <label className="text-sm text-ink/70">From time (optional)
-              <input type="time" name="startTime" step="900" className="mt-1.5 block h-11 w-full rounded-[10px] border border-linen bg-white/80 px-3 text-[1rem] text-ink" />
+            <label className="text-sm text-ink/70">From time
+              <TimeSelect name="startTime" blankLabel="Start of day" />
             </label>
             <label className="text-sm text-ink/70">To date
               <input type="date" name="endDate" required defaultValue={date} className="mt-1.5 block h-11 w-full rounded-[10px] border border-linen bg-white/80 px-3 text-[1rem] text-ink" />
             </label>
-            <label className="text-sm text-ink/70">To time (optional)
-              <input type="time" name="endTime" step="900" className="mt-1.5 block h-11 w-full rounded-[10px] border border-linen bg-white/80 px-3 text-[1rem] text-ink" />
+            <label className="text-sm text-ink/70">To time
+              <TimeSelect name="endTime" blankLabel="End of day" />
             </label>
             <label className="text-sm text-ink/70 sm:col-span-2">Reason (optional, staff only)
               <input type="text" name="reason" maxLength={200} className="mt-1.5 block h-11 w-full rounded-[10px] border border-linen bg-white/80 px-3 text-[1rem] text-ink" />
@@ -188,5 +188,20 @@ function TimeOffItem({ t, date }) {
         </ConfirmButton>
       </form>
     </li>
+  );
+}
+
+// Every 15 minutes from 6:00 am to 10:00 pm: easier than the browser's clock picker, and always a valid booking time
+const TIME_OPTIONS = Array.from({ length: (22 - 6) * 4 + 1 }, (_, i) => {
+  const minutes = 6 * 60 + i * 15;
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+});
+
+function TimeSelect({ name, blankLabel }) {
+  return (
+    <select name={name} defaultValue="" className="mt-1.5 block h-11 w-full rounded-[10px] border border-linen bg-white/80 px-3 text-[1rem] text-ink">
+      <option value="">{blankLabel}</option>
+      {TIME_OPTIONS.map((t) => <option key={t} value={t}>{clock(t)}</option>)}
+    </select>
   );
 }
