@@ -20,6 +20,8 @@ export async function GET() {
     SUPABASE_URL: !url ? 'missing' : /^https:\/\/[a-z0-9]+\.supabase\.co\/?$/.test(url) ? 'looks right' : 'set, but not in the form https://xxxx.supabase.co',
     SUPABASE_SECRET_KEY: keyKind(process.env.SUPABASE_SECRET_KEY),
     database: 'not tried',
+    // Names only (never values), to spot typos like "SUPABASE_URL " or "supabase_url"
+    similarNames: Object.keys(process.env).filter((name) => /supa|secret/i.test(name)).map((name) => JSON.stringify(name)),
   };
   try {
     const { error } = await db().from('services').select('id', { head: true, count: 'exact' });
