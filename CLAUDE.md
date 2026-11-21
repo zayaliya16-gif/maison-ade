@@ -6,6 +6,7 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
 
 ## Status
 - Phase 1 (setup + design) done: homepage with menu, stylists, hours; `/book` is a placeholder.
+- Live at https://maison-ade.vercel.app (GitHub zayaliya16-gif/maison-ade, Vercel auto-deploys from `main`).
 - Next: phase 2 availability engine (staff, services, working hours, time off, bookings; overlap-proof in the DB), then
   3 customer booking, 4 manage links + staff calendar, 5 email (Resend) + WhatsApp (Meta Cloud API test number) with a message log,
   6 automatic reminders every 15 min (retries, never twice), 7 tests + security review + README + live.
@@ -23,6 +24,7 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
 - Signature: `Wordmark` draws the é accent as a brass crown (Adé = crown in Yoruba). Keep it the one bold element; everything else quiet.
 - All salon data (services with minutes + priceKobo, staff and which services they do, opening hours) lives in `src/config/salon.js`. Everything is DEMO data; the footer says the salon is made up.
 - Money in kobo; display with `naira()` in `src/lib/format.js` (hand-formatted so server and browser match).
+- Database: Supabase, server-only. `db()` in `src/lib/supabase.js` uses `SUPABASE_URL` + `SUPABASE_SECRET_KEY` from `.env.local` (template `.env.example`); `npm run db:check` tests it. Browsers never get a Supabase key.
 - Times are Africa/Lagos (UTC+1 all year, no DST).
 - Security headers in `next.config.mjs`; Vercel functions in `lhr1` (`vercel.json`).
 - Git commits use the GitHub noreply email (repo-local config) so Vercel Hobby deploys them.
