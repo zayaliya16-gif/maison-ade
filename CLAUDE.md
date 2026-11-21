@@ -33,5 +33,5 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
   Rules (`bookingRules` in salon.js): 15-min steps, 2h notice, 60 days ahead, service must end by close.
   Tests: `tests/availability.test.js` (pure) and `tests/database.test.js` (real DB, 2099 dates, cleans up after itself).
 - Times are Africa/Lagos (UTC+1 all year, no DST).
-- Security headers in `next.config.mjs`; Vercel functions in `lhr1` (`vercel.json`).
+- Security headers in `next.config.mjs`; Vercel functions in `dub1` Dublin (`vercel.json`), next to Supabase in eu-west-1 Ireland: keep them together.
 - Git commits use the GitHub noreply email (repo-local config) so Vercel Hobby deploys them.
