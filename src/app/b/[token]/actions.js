@@ -1,6 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
+import { notify } from '@/lib/messages/outbox.js';
 import { cancelByToken, moveByToken } from '@/lib/booking.js';
 import { parseDate } from '@/lib/availability.js';
 
@@ -25,6 +27,7 @@ export async function cancelAction(formData) {
     console.error('Cancel failed', error);
     redirect(`/b/${token}?note=error`);
   }
+  if (result.ok) after(() => notify(result.bookingId, 'cancelled'));
   redirect(`/b/${token}?note=${result.ok ? 'cancelled' : result.reason}`);
 }
 
@@ -42,7 +45,10 @@ export async function moveAction(formData) {
     console.error('Move failed', error);
     redirect(`/b/${token}?note=error`);
   }
-  if (result.ok) redirect(`/b/${token}?note=moved`);
+  if (result.ok) {
+    after(() => notify(result.bookingId, 'moved'));
+    redirect(`/b/${token}?note=moved`);
+  }
   if (result.reason === 'taken') redirect(`/b/${token}/change?date=${date}&note=taken`);
   redirect(`/b/${token}?note=${result.reason}`);
 }

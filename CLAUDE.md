@@ -18,8 +18,13 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
   signed 12h cookie (`src/lib/session.js`, key = hash of SUPABASE_SECRET_KEY + password), lockout 5 fails / 15 min per hashed IP
   (`src/lib/login-attempts.js`, table `login_attempts`). Every staff page/action calls `requireStaff()`. Day/time picker shared: `SlotPicker`.
   Tests run files one at a time (`--test-concurrency=1`): DB tests book the same stylists and would clash.
-- Next: 5 email (Resend) + WhatsApp (Meta Cloud API test number) with a message log,
-  6 automatic reminders every 15 min (retries, never twice), 7 tests + security review + README + live.
+- Phase 5 (messages) done: `src/lib/messages/` = templates.js (wording, pure), providers.js (Resend + Meta Cloud API v25 via fetch,
+  plain-word errors, retry vs permanent), outbox.js (queue → claim → send → log in `messages`; unique per booking+channel+kind+time;
+  claim via status+attempts check so never twice; MAX_ATTEMPTS 5). Actions call `after(() => notify(id, kind))`.
+  Links in messages: `linkTokenFor(id)` = HMAC of booking id with SUPABASE_SECRET_KEY (rotating it breaks links). `/staff/messages` log + retry.
+  Free test limits: Resend only to the account's own email; WhatsApp test number only to verified numbers, free text only within 24h
+  of the customer writing (templates via WHATSAPP_USE_TEMPLATES=on once approved). `npm run msg:test -- <phone> <email>` sends one real test.
+- Next: 6 automatic reminders every 15 min (retries, never twice), 7 tests + security review + README + live.
 - "Done" rule for project 3+: input checks, error handling, tests, security checks, README.
 - Plan before building each phase; the owner says "start". Explain in plain language; the owner is learning.
 

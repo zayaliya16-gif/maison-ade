@@ -1,6 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
+import { notify } from '@/lib/messages/outbox.js';
 import { createBooking, MAX_UPCOMING_PER_PHONE } from '@/lib/booking.js';
 import { parseCustomer } from '@/lib/booking-input.js';
 import { parseDate } from '@/lib/availability.js';
@@ -47,6 +49,8 @@ export async function submitBooking(previous, formData) {
     return fail({ message: `This phone number already has ${MAX_UPCOMING_PER_PHONE} upcoming bookings. To book more, please call us on ${salon.phoneDisplay}.` });
   }
 
-  // Booked: go to the private confirmation page (outside try/catch: redirect works by throwing)
+  // Booked: send the confirmation after the page has responded, so the customer never waits for email/WhatsApp
+  after(() => notify(result.bookingId, 'confirmed'));
+  // Go to the private confirmation page (outside try/catch: redirect works by throwing)
   redirect(`/b/${result.token}`);
 }

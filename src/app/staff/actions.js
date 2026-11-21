@@ -1,6 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
+import { notify, retryMessage } from '@/lib/messages/outbox.js';
 import { logIn, logOut, requireStaff, LOCK_MINUTES } from '@/lib/staff-auth.js';
 import { addTimeOff, isUuid, removeTimeOff } from '@/lib/staff.js';
 import { cancelBooking } from '@/lib/booking.js';
@@ -76,11 +78,25 @@ export async function staffCancelAction(formData) {
   await requireStaff();
   const id = field(formData, 'id', 36);
   if (!isUuid(id)) redirect(dayLink(formData, 'error'));
+  let result;
   try {
-    await cancelBooking(id, 'staff');
+    result = await cancelBooking(id, 'staff');
   } catch (error) {
     console.error('Staff cancel failed', error);
     redirect(dayLink(formData, 'error'));
   }
+  if (result.ok) after(() => notify(id, 'cancelled')); // tell the customer
   redirect(dayLink(formData, 'booking-cancelled'));
+}
+
+export async function retryMessageAction(formData) {
+  await requireStaff();
+  const id = field(formData, 'id', 36);
+  if (!isUuid(id)) redirect('/staff/messages');
+  try {
+    await retryMessage(id);
+  } catch (error) {
+    console.error('Retry message failed', error);
+  }
+  redirect('/staff/messages');
 }

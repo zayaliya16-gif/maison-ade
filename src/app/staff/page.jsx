@@ -55,7 +55,11 @@ export default async function StaffDiary({ searchParams }) {
             <Link href="/" className="text-2xl text-emerald"><Wordmark /></Link>
             <span className="text-sm text-brass">Staff</span>
           </div>
-          <form action={logoutAction}><button type="submit" className="text-sm text-ink/65 hover:text-ink">Log out</button></form>
+          <nav aria-label="Staff" className="flex items-center gap-5 text-sm">
+            <span aria-current="page" className="text-emerald">Diary</span>
+            <Link href="/staff/messages" className="text-ink/65 hover:text-ink">Messages</Link>
+            <form action={logoutAction}><button type="submit" className="text-ink/65 hover:text-ink">Log out</button></form>
+          </nav>
         </div>
       </header>
 

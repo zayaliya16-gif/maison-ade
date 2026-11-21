@@ -1,5 +1,5 @@
 import 'server-only';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { db } from './supabase.js';
 import { findSlots, getService } from './schedule.js';
 import { lagosDayRange } from './availability.js';
@@ -13,6 +13,18 @@ const SLOT_TAKEN = '23P01'; // Postgres: the no_double_booking rule refused it
 
 /** The private link code is shown to the customer once; the database only keeps its fingerprint (hash). */
 export const hashToken = (token) => createHash('sha256').update(token).digest('hex');
+
+/**
+ * The private link code for a booking. It's made from the booking's id and a server-only secret,
+ * so the server can rebuild it later (for messages and reminders), while the database still only
+ * stores its hash. Nobody without the secret can work it out from the id.
+ * (If SUPABASE_SECRET_KEY is ever changed, existing links stop working.)
+ */
+export function linkTokenFor(bookingId) {
+  const key = createHash('sha256').update(`maison-ade manage link
+${process.env.SUPABASE_SECRET_KEY}`).digest();
+  return createHmac('sha256', key).update(String(bookingId)).digest('base64url');
+}
 const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, written in URL-safe letters
 
 /**
@@ -23,7 +35,7 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, written in URL-safe 
  * @param {string} p.date         "YYYY-MM-DD" (Lagos)
  * @param {string} p.time         "HH:MM" (Lagos)
  * @param {object} p.customer     from parseCustomer(): { name, phone, email, whatsappOptIn, emailOptIn }
- * @returns {Promise<{ ok: true, token: string } | { ok: false, reason: 'taken' | 'limit' }>}
+ * @returns {Promise<{ ok: true, token: string, bookingId: string } | { ok: false, reason: 'taken' | 'limit' }>}
  */
 export async function createBooking({ serviceId, staffChoice, date, time, customer }) {
   const supabase = db();
@@ -54,9 +66,11 @@ export async function createBooking({ serviceId, staffChoice, date, time, custom
     candidates = rankStylists(candidates, counts);
   }
 
-  const token = randomBytes(32).toString('base64url');
+  const bookingId = randomUUID();
+  const token = linkTokenFor(bookingId);
   for (const staffId of candidates) {
     const { error } = await supabase.from('bookings').insert({
+      id: bookingId,
       staff_id: staffId,
       service_id: service.id,
       starts_at: slot.startsAt,
@@ -69,7 +83,7 @@ export async function createBooking({ serviceId, staffChoice, date, time, custom
       email_opt_in: customer.emailOptIn,
       manage_token_hash: hashToken(token),
     });
-    if (!error) return { ok: true, token };
+    if (!error) return { ok: true, token, bookingId };
     if (error.code !== SLOT_TAKEN) throw error;
     // Someone booked this stylist a moment ago: for "any", try the next free stylist
   }
@@ -105,7 +119,8 @@ export async function cancelByToken(token) {
   if (!booking) return { ok: false, reason: 'not-found' };
   if (booking.status !== 'confirmed') return { ok: false, reason: 'already-cancelled' };
   if (!canChangeOnline(booking)) return { ok: false, reason: 'too-late' };
-  return cancelBooking(booking.id, 'customer');
+  const result = await cancelBooking(booking.id, 'customer');
+  return result.ok ? { ok: true, bookingId: booking.id } : result;
 }
 
 /** Cancels a booking (customer or staff). Only touches it if it's still confirmed, so a double click is harmless. */
@@ -140,5 +155,5 @@ export async function moveByToken(token, { date, time }) {
     .select('id');
   if (error?.code === SLOT_TAKEN) return { ok: false, reason: 'taken' };
   if (error) throw error;
-  return data.length ? { ok: true } : { ok: false, reason: 'already-cancelled' };
+  return data.length ? { ok: true, bookingId: booking.id } : { ok: false, reason: 'already-cancelled' };
 }

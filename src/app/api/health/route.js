@@ -20,6 +20,8 @@ export async function GET() {
     SUPABASE_URL: !url ? 'missing' : /^https:\/\/[a-z0-9]+\.supabase\.co\/?$/.test(url) ? 'looks right' : 'set, but not in the form https://xxxx.supabase.co',
     SUPABASE_SECRET_KEY: keyKind(process.env.SUPABASE_SECRET_KEY),
     STAFF_PASSWORD: !process.env.STAFF_PASSWORD ? 'missing' : process.env.STAFF_PASSWORD.length < 12 ? 'too short (needs 12+ characters)' : 'set',
+    RESEND_API_KEY: process.env.RESEND_API_KEY ? 'set' : 'missing (emails are logged as not sent)',
+    WHATSAPP: process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID ? 'set' : 'missing (WhatsApps are logged as not sent)',
     database: 'not tried',
   };
   try {

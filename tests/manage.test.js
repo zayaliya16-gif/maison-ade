@@ -51,7 +51,7 @@ test('a customer can cancel, the time frees up, and cancelling twice is harmless
   const { date, slots } = await freeDay(1);
   const { token } = await book(date, slots[0].time);
 
-  assert.deepEqual(await lib.cancelByToken(token), { ok: true });
+  assert.equal((await lib.cancelByToken(token)).ok, true);
   const booking = await lib.getBookingByToken(token);
   assert.equal(booking.status, 'cancelled');
   assert.equal(booking.cancelled_by, 'customer');
@@ -66,7 +66,7 @@ test('a customer can move to a free time; the same link keeps working and the ol
   const { token } = await book(date, slots[0].time);
 
   // 15 minutes later overlaps its own old time: allowed, because it's the same booking moving
-  assert.deepEqual(await lib.moveByToken(token, { date, time: slots[1].time }), { ok: true });
+  assert.equal((await lib.moveByToken(token, { date, time: slots[1].time })).ok, true);
   const moved = await lib.getBookingByToken(token);
   assert.equal(moved.starts_at.slice(0, 16), slots[1].startsAt.slice(0, 16));
   assert.ok(moved.moved_at);
