@@ -54,7 +54,7 @@ export async function sendWhatsApp({ to, text, template, values }) {
       template: {
         name: template.name,
         language: { code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en' },
-        components: [{ type: 'body', parameters: template.params.map((p) => ({ type: 'text', text: String(values[p]).slice(0, 1000) })) }],
+        ...(template.params.length ? { components: [{ type: 'body', parameters: template.params.map((p) => ({ type: 'text', text: String(values[p]).slice(0, 1000) })) }] } : {}),
       },
     }
     : { type: 'text', text: { body: text.slice(0, 4096), preview_url: true } };

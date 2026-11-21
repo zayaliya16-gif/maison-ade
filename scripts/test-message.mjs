@@ -2,13 +2,16 @@
 // Run:  npm run msg:test -- 08031234567            (WhatsApp to your number)
 //       npm run msg:test -- you@example.com        (email to your address)
 //       npm run msg:test -- 08031234567 you@example.com
+//       npm run msg:test -- hello 08031234567          (Meta's built-in hello_world template: works without the 24-hour window)
 // Uses the same senders and wording as the app. Nothing is saved to the database.
 import { sendEmail, sendWhatsApp } from '../src/lib/messages/providers.js';
 import { composeMessage, WHATSAPP_TEMPLATES } from '../src/lib/messages/templates.js';
 import { normalizePhone, cleanEmail } from '../src/lib/booking-input.js';
 import { randomUUID } from 'node:crypto';
 
-const args = process.argv.slice(2);
+const all = process.argv.slice(2);
+const hello = all.includes('hello');
+const args = all.filter((a) => a !== 'hello');
 if (args.length === 0) {
   console.log('Usage: npm run msg:test -- <your WhatsApp number> <your email>   (either or both)');
   process.exit(1);
@@ -33,7 +36,13 @@ for (const arg of args) {
   } else {
     const to = normalizePhone(arg);
     if (!to) { console.log(`✗ "${arg}" doesn't look like a mobile number`); continue; }
-    const r = await sendWhatsApp({ to, text: `[TEST] ${content.whatsappText}`, template: WHATSAPP_TEMPLATES.confirmed, values: content.values });
+    if (hello) process.env.WHATSAPP_USE_TEMPLATES = 'on', process.env.WHATSAPP_TEMPLATE_LANGUAGE = 'en_US';
+    const r = await sendWhatsApp({
+      to,
+      text: `[TEST] ${content.whatsappText}`,
+      template: hello ? { name: 'hello_world', params: [] } : WHATSAPP_TEMPLATES.confirmed,
+      values: content.values,
+    });
     console.log(r.ok ? '✓ WhatsApp accepted by Meta. Check your phone.' : `✗ WhatsApp: ${r.error}`);
   }
 }
