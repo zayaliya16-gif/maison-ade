@@ -5,7 +5,7 @@ Curriculum project 4 ("booking app with WhatsApp/email reminders": scheduling, w
 The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2 (Lash Magic) is in `../animated website`.
 
 ## Status
-- Phase 1 (setup + design) done: homepage with menu, stylists, hours; `/book` is a placeholder.
+- Phase 1 (setup + design) done: homepage with menu, stylists, hours.
 - Live at https://maison-ade.vercel.app (GitHub zayaliya16-gif/maison-ade, Vercel auto-deploys from `main`).
 - Phase 2 (availability engine) done: tables + overlap-proof bookings in Supabase, `findSlots()`, 21 tests passing.
 - Phase 3 (customer booking) done: `/book` 4 steps (state in URL params), server action `src/app/book/actions.js` →
