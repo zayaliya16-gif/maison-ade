@@ -23,3 +23,24 @@ export function clock(hhmm) {
 }
 
 export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/** "2026-12-05" → { weekday: "Sat", day: 5, month: "Dec" } (no time-zone surprises: it's just the calendar date) */
+export function dayParts(date) {
+  const [y, m, d] = date.split('-').map(Number);
+  const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return { weekday: WEEKDAYS[weekday].slice(0, 3), longWeekday: WEEKDAYS[weekday], day: d, month: MONTHS[m - 1].slice(0, 3), longMonth: MONTHS[m - 1], year: y };
+}
+
+/** "2026-12-05" → "Sat 5 Dec" */
+export function shortDate(date) {
+  const p = dayParts(date);
+  return `${p.weekday} ${p.day} ${p.month}`;
+}
+
+/** "2026-12-05" → "Saturday 5 December 2026" */
+export function longDate(date) {
+  const p = dayParts(date);
+  return `${p.longWeekday} ${p.day} ${p.longMonth} ${p.year}`;
+}

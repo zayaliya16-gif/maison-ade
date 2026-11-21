@@ -72,6 +72,9 @@ export default function Home() {
                         <div className="mt-3 flex items-center gap-3">
                           <span className="h-[3px] rounded-full bg-brass-light/80" style={{ width: `${Math.max(8, (s.minutes / LONGEST) * 100)}%` }} aria-hidden="true" />
                           <span className="shrink-0 text-xs text-bone/60">{duration(s.minutes)}</span>
+                          <Link href={`/book?service=${s.id}`} className="ml-auto shrink-0 text-sm text-brass-light underline-offset-4 hover:underline">
+                            Book<span className="sr-only"> {s.name}</span>
+                          </Link>
                         </div>
                       </li>
                     ))}

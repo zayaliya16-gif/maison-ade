@@ -8,7 +8,11 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
 - Phase 1 (setup + design) done: homepage with menu, stylists, hours; `/book` is a placeholder.
 - Live at https://maison-ade.vercel.app (GitHub zayaliya16-gif/maison-ade, Vercel auto-deploys from `main`).
 - Phase 2 (availability engine) done: tables + overlap-proof bookings in Supabase, `findSlots()`, 21 tests passing.
-- Next: 3 customer booking (uses `findSlots()`; insert booking, treat error 23P01 as "slot just taken"), 4 manage links + staff calendar, 5 email (Resend) + WhatsApp (Meta Cloud API test number) with a message log,
+- Phase 3 (customer booking) done: `/book` 4 steps (state in URL params), server action `src/app/book/actions.js` →
+  `createBooking()` in `src/lib/booking.js` (re-checks slot, 3 upcoming per phone, "any" = least busy, retries next stylist on 23P01).
+  Private page `/b/[token]` (+ `/calendar` .ics): random 32-byte token, only its SHA-256 stored. Input checks in `src/lib/booking-input.js`.
+  Tests use phone `+999...` (not a real country) and clean up. `npm test` runs with `--conditions=react-server` so server-only code is testable.
+- Next: 4 manage links + staff calendar, 5 email (Resend) + WhatsApp (Meta Cloud API test number) with a message log,
   6 automatic reminders every 15 min (retries, never twice), 7 tests + security review + README + live.
 - "Done" rule for project 3+: input checks, error handling, tests, security checks, README.
 - Plan before building each phase; the owner says "start". Explain in plain language; the owner is learning.

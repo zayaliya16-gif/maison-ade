@@ -1,25 +1,33 @@
 import 'server-only';
 import { db } from './supabase.js';
 import { salon, bookingRules } from '../config/salon.js';
-import { getAvailableSlots, lagosDayRange, weekdayOf } from './availability.js';
+import { getAvailableSlots, lagosDayRange } from './availability.js';
 
-// Fetches everything the availability engine needs for one day from the database,
-// then asks the engine for free slots. Used by the booking pages (phase 3).
+// Fetches what the availability engine needs from the database, then asks it for free slots.
+// Several days are loaded in one go (for the week view), so a week costs the same few queries as one day.
+
+/** A service from the database (only active ones), or null */
+export async function getService(serviceId) {
+  const { data, error } = await db()
+    .from('services').select('id, name, minutes, price_kobo').eq('id', serviceId).eq('active', true).maybeSingle();
+  if (error) throw error;
+  return data;
+}
 
 /**
+ * Free slots for each of several days.
  * @param {object} p
- * @param {string} p.date        "YYYY-MM-DD" (Lagos)
- * @param {string} p.serviceId   e.g. "silk-press"
- * @param {string} [p.staffId]   a specific stylist, or leave out for "any stylist"
+ * @param {string}   p.serviceId  e.g. "silk-press"
+ * @param {string}   [p.staffId]  a specific stylist, or leave out for "any stylist"
+ * @param {string[]} p.dates      "YYYY-MM-DD" days (Lagos), in order
+ * @returns {Promise<Map<string, Array>>} date → slots (see getAvailableSlots)
  */
-export async function findSlots({ date, serviceId, staffId }) {
+export async function findSlotsForDays({ serviceId, staffId, dates }) {
   const supabase = db();
-  const weekday = weekdayOf(date); // also rejects bad dates
-  const { from, to } = lagosDayRange(date);
+  const result = new Map(dates.map((d) => [d, []]));
+  if (dates.length === 0) return result;
 
-  const { data: service, error: serviceError } = await supabase
-    .from('services').select('id, minutes').eq('id', serviceId).eq('active', true).maybeSingle();
-  if (serviceError) throw serviceError;
+  const service = await getService(serviceId);
   if (!service) throw new Error(`Unknown service "${serviceId}"`);
 
   // Active stylists who do this service (or just the one asked for)
@@ -28,25 +36,30 @@ export async function findSlots({ date, serviceId, staffId }) {
   const { data: qualified, error: whoError } = await who;
   if (whoError) throw whoError;
   const staffIds = qualified.map((row) => row.staff_id);
-  if (staffIds.length === 0) return [];
+  if (staffIds.length === 0) return result;
 
-  // Their hours that weekday, plus their time off and confirmed bookings that touch this day
+  // Everything from the start of the first day to the end of the last
+  const from = lagosDayRange(dates[0]).from.toISOString();
+  const to = lagosDayRange(dates.at(-1)).to.toISOString();
   const [hours, timeOff, bookings] = await Promise.all([
-    supabase.from('working_hours').select('staff_id, weekday, starts, ends').in('staff_id', staffIds).eq('weekday', weekday),
-    supabase.from('time_off').select('staff_id, starts_at, ends_at').in('staff_id', staffIds)
-      .lt('starts_at', to.toISOString()).gt('ends_at', from.toISOString()),
-    supabase.from('bookings').select('staff_id, starts_at, ends_at').in('staff_id', staffIds).eq('status', 'confirmed')
-      .lt('starts_at', to.toISOString()).gt('ends_at', from.toISOString()),
+    supabase.from('working_hours').select('staff_id, weekday, starts, ends').in('staff_id', staffIds),
+    supabase.from('time_off').select('staff_id, starts_at, ends_at').in('staff_id', staffIds).lt('starts_at', to).gt('ends_at', from),
+    supabase.from('bookings').select('staff_id, starts_at, ends_at').in('staff_id', staffIds).eq('status', 'confirmed').lt('starts_at', to).gt('ends_at', from),
   ]);
-  for (const result of [hours, timeOff, bookings]) if (result.error) throw result.error;
+  for (const r of [hours, timeOff, bookings]) if (r.error) throw r.error;
 
-  return getAvailableSlots({
-    date,
-    serviceMinutes: service.minutes,
-    staffIds,
-    salonHours: salon.hours,
-    workingHours: hours.data.map((h) => ({ staffId: h.staff_id, weekday: h.weekday, starts: h.starts, ends: h.ends })),
-    busy: [...timeOff.data, ...bookings.data].map((b) => ({ staffId: b.staff_id, startsAt: b.starts_at, endsAt: b.ends_at })),
-    rules: bookingRules,
-  });
+  const workingHours = hours.data.map((h) => ({ staffId: h.staff_id, weekday: h.weekday, starts: h.starts, ends: h.ends }));
+  const busy = [...timeOff.data, ...bookings.data].map((b) => ({ staffId: b.staff_id, startsAt: b.starts_at, endsAt: b.ends_at }));
+
+  for (const date of dates) {
+    result.set(date, getAvailableSlots({
+      date, serviceMinutes: service.minutes, staffIds, salonHours: salon.hours, workingHours, busy, rules: bookingRules,
+    }));
+  }
+  return result;
+}
+
+/** Free slots for one day. Same options as findSlotsForDays, with `date` instead of `dates`. */
+export async function findSlots({ date, serviceId, staffId }) {
+  return (await findSlotsForDays({ serviceId, staffId, dates: [date] })).get(date);
 }

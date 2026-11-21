@@ -124,3 +124,15 @@ export function getAvailableSlots({ date, serviceMinutes, staffIds, salonHours, 
 
   return [...slots.values()].sort((a, b) => a.time.localeCompare(b.time));
 }
+
+/** "2026-12-30" + 3 → "2027-01-02" */
+export function addDays(date, days) {
+  const { y, m, d } = parseDate(date);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+/** An exact moment → its Lagos date and time: { date: "2026-12-05", time: "09:30" } */
+export function toLagos(moment) {
+  const iso = new Date(new Date(moment).getTime() + LAGOS_OFFSET_MINUTES * MINUTE).toISOString();
+  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
+}
