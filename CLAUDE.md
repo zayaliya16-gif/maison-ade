@@ -17,7 +17,7 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
 - `npm run dev` (localhost:3000), `npm run build`, `npm start`, `npm test` (Node test runner, `tests/`)
 
 ## Architecture
-- Next.js 15 App Router (`src/app`) + React 19, Tailwind v4 via `@tailwindcss/postcss`, pinned to 4.3.3 (4.3.4+ needs Node 20.19+; this machine has Node 20.12).
+- Next.js 15 App Router (`src/app`) + React 19, Tailwind v4 via `@tailwindcss/postcss`. Node 22 (`engines` in package.json, so Vercel matches).
 - Fonts self-hosted in `src/app/fonts` via `next/font/local` (Fraunces display, Hanken Grotesk body): builds never fetch Google Fonts.
 - Design tokens in `src/app/globals.css` `@theme`: bone, linen, ink, emerald, emerald-soft, brass, brass-light. Light-first; emerald blocks for contrast.
   Custom CSS (`.btn*`) must stay in `@layer components` so utilities like `hidden` win.
