@@ -43,13 +43,16 @@ export default async function MessagesPage() {
 
       <main id="main" className="mx-auto max-w-[1240px] px-5 pb-24 pt-8 sm:px-8">
         <h1 className="font-display text-[clamp(1.8rem,4vw,2.6rem)] font-[350] leading-tight text-emerald">Messages</h1>
-        <p className="mt-1 text-sm text-ink/60">The latest 100 emails and WhatsApps, newest first. Times are Lagos time.</p>
+        <p className="mt-1 text-sm text-ink/60">The latest 100 emails and WhatsApps, newest first. Times are Lagos time. “Sent” means the service accepted it; WhatsApps then show Delivered or Read.</p>
 
         {messages.length === 0 && <p className="mt-10 text-ink/60">No messages yet. They appear here when customers book, move or cancel.</p>}
 
         <ul className="mt-8 divide-y divide-linen rounded-[14px] border border-linen bg-white/40">
           {messages.map((m) => {
-            const [label, tone] = STATUS[m.status] ?? [m.status, 'bg-linen'];
+            // WhatsApp tells us later whether it reached the phone (only once the webhook is set up)
+            const [label, tone] = m.status === 'sent' && m.delivery === 'read' ? ['Read', 'bg-emerald text-bone']
+              : m.status === 'sent' && m.delivery === 'delivered' ? ['Delivered', 'bg-emerald text-bone']
+              : STATUS[m.status] ?? [m.status, 'bg-linen'];
             return (
               <li key={m.id} className="grid gap-2 px-5 py-4 md:grid-cols-[9rem_1fr_auto] md:items-start md:gap-6">
                 <div>

@@ -12,6 +12,7 @@ import { sendEmail, sendWhatsApp } from './providers.js';
 //  3. Email uses the message id as Resend's idempotency key, so even a repeat request is ignored by Resend.
 
 export const MAX_ATTEMPTS = 5;
+const REAL_SENDERS = { email: sendEmail, whatsapp: sendWhatsApp };
 
 /** The site's public address, for links in messages */
 export function siteUrl() {
@@ -19,7 +20,7 @@ export function siteUrl() {
   return (process.env.SITE_URL || fromVercel || 'http://localhost:3000').replace(/\/+$/, '');
 }
 
-const BOOKING_FIELDS = 'id, customer_name, customer_phone, customer_email, whatsapp_opt_in, email_opt_in, starts_at, price_kobo, manage_token_hash, service:services(name, minutes), stylist:staff(name)';
+const BOOKING_FIELDS = 'id, status, customer_name, customer_phone, customer_email, whatsapp_opt_in, email_opt_in, starts_at, price_kobo, manage_token_hash, service:services(name, minutes), stylist:staff(name)';
 
 /**
  * Writes the messages a booking event needs (one per channel the customer agreed to).
@@ -49,15 +50,25 @@ export async function queueMessages(bookingId, kind) {
  * Sends one message if it's waiting (pending, or failed and worth retrying).
  * @param {string} messageId
  * @param {object} [senders]  { email, whatsapp } — tests pass fake senders; normally the real ones
+ * @param {Date}   [now]      the current time (tests pass a fixed one)
  * @returns {Promise<string>} what happened: sent | failed | skipped | busy (someone else is sending it) | done (nothing to do)
  */
-export async function deliver(messageId, senders = { email: sendEmail, whatsapp: sendWhatsApp }) {
+export async function deliver(messageId, senders = REAL_SENDERS, now = new Date()) {
   const supabase = db();
   const { data: msg, error } = await supabase.from('messages')
     .select(`id, channel, kind, recipient, status, attempts, for_starts_at, booking:bookings(${BOOKING_FIELDS})`)
     .eq('id', messageId).maybeSingle();
   if (error) throw error;
   if (!msg || !['pending', 'failed'].includes(msg.status) || msg.attempts >= MAX_ATTEMPTS) return 'done';
+
+  // Out of date? (cancelled, moved, or the appointment has passed): never send it
+  const stale = staleReason(msg, now);
+  if (stale) {
+    const { error: skipError } = await supabase.from('messages').update({ status: 'skipped', error: stale })
+      .eq('id', msg.id).in('status', ['pending', 'failed']);
+    if (skipError) throw skipError;
+    return 'skipped';
+  }
 
   // Claim it: only succeeds if nobody else changed it since we read it
   const { data: claimed, error: claimError } = await supabase.from('messages')
@@ -92,6 +103,17 @@ export async function deliver(messageId, senders = { email: sendEmail, whatsapp:
   return update.status;
 }
 
+/** Why a message should no longer be sent, or null if it's still right to send */
+export function staleReason(msg, now = new Date()) {
+  const booking = msg.booking;
+  if (!booking) return 'The booking no longer exists.';
+  if (msg.kind === 'cancelled') return null; // always worth telling them
+  if (booking.status !== 'confirmed') return 'Not sent: the booking was cancelled first.';
+  if (new Date(booking.starts_at).getTime() !== new Date(msg.for_starts_at).getTime()) return 'Not sent: the booking moved to another time first.';
+  if (msg.kind.startsWith('reminder') && new Date(msg.for_starts_at).getTime() <= now.getTime()) return 'Not sent: the appointment time had passed.';
+  return null;
+}
+
 /**
  * Queue and send everything for a booking event. Never throws: messages must never break booking.
  * Call it inside `after(...)` so the customer's page doesn't wait for email or WhatsApp.
@@ -120,7 +142,7 @@ export async function retryMessage(messageId) {
 /** The most recent messages, for the staff log */
 export async function recentMessages(limit = 100) {
   const { data, error } = await db().from('messages')
-    .select('id, channel, kind, recipient, status, attempts, error, created_at, sent_at, for_starts_at, booking:bookings(customer_name, service:services(name), stylist:staff(name))')
+    .select('id, channel, kind, recipient, status, attempts, error, created_at, sent_at, for_starts_at, delivery, delivered_at, read_at, booking:bookings(customer_name, service:services(name), stylist:staff(name))')
     .order('created_at', { ascending: false }).limit(limit);
   if (error) throw error;
   return data;

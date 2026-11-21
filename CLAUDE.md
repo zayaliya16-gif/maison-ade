@@ -24,7 +24,13 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
   Links in messages: `linkTokenFor(id)` = HMAC of booking id with SUPABASE_SECRET_KEY (rotating it breaks links). `/staff/messages` log + retry.
   Free test limits: Resend only to the account's own email; WhatsApp test number only to verified numbers, free text only within 24h
   of the customer writing (templates via WHATSAPP_USE_TEMPLATES=on once approved). `npm run msg:test -- <phone> <email>` sends one real test.
-- Next: 6 automatic reminders every 15 min (retries, never twice), 7 tests + security review + README + live.
+- Phase 6 (reminders) done: Supabase pg_cron (Vercel Hobby cron is daily only) POSTs `/api/cron/reminders` every 15 min with
+  `Bearer CRON_SECRET` (secret in Supabase Vault; migration 0006 keeps a placeholder, never commit the real one).
+  `runReminders()` in `src/lib/reminders.js`: reminder_day (24h→6h before, if booked ≥24h ahead), reminder_soon (2h→30min, if booked ≥3h ahead),
+  retries with backoff (`retryDue`), stuck 'sending' >10 min: email retried (Resend idempotency), WhatsApp NOT (never twice).
+  `deliver()` skips stale messages (cancelled / moved / time passed). WhatsApp webhook `/api/webhooks/whatsapp` (signed with
+  WHATSAPP_APP_SECRET, verify token WHATSAPP_WEBHOOK_VERIFY_TOKEN) fills messages.delivery. Meta steps: `docs/whatsapp-setup.md`.
+- Next: 7 tests + security review + README + live.
 - "Done" rule for project 3+: input checks, error handling, tests, security checks, README.
 - Plan before building each phase; the owner says "start". Explain in plain language; the owner is learning.
 

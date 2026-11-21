@@ -22,6 +22,8 @@ export async function GET() {
     STAFF_PASSWORD: !process.env.STAFF_PASSWORD ? 'missing' : process.env.STAFF_PASSWORD.length < 12 ? 'too short (needs 12+ characters)' : 'set',
     RESEND_API_KEY: process.env.RESEND_API_KEY ? 'set' : 'missing (emails are logged as not sent)',
     WHATSAPP: process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID ? 'set' : 'missing (WhatsApps are logged as not sent)',
+    CRON_SECRET: (process.env.CRON_SECRET ?? '').length >= 32 ? 'set' : 'missing (automatic reminders are off)',
+    WHATSAPP_WEBHOOK: process.env.WHATSAPP_APP_SECRET && process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ? 'set' : 'missing (no delivered/read tracking)',
     database: 'not tried',
   };
   try {
