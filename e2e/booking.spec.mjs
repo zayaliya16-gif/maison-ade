@@ -28,13 +28,18 @@ test('a customer books, changes the time, then cancels', async ({ page }) => {
   const problems = watchForProblems(page);
 
   // Book
+  // After each click, wait for the next step to appear (like a person would), so a slow server can't confuse the test
   await page.goto('/');
   await page.getByRole('link', { name: 'Book a visit' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Choose a service' })).toBeVisible();
   await page.getByRole('link', { name: /Trim and shape/ }).click();
+  await expect(page.getByRole('heading', { name: 'Choose a stylist' })).toBeVisible();
   await page.getByRole('link', { name: /Any stylist/ }).click();
+  await expect(page.getByRole('heading', { name: 'Pick a day and time' })).toBeVisible();
   await page.getByRole('link', { name: /times free/ }).first().click();
-  const firstTime = page.locator('section[aria-label="Day and time"] ul.grid-cols-3 a').first();
-  await firstTime.click();
+  await expect(page.getByRole('heading', { level: 2 }).filter({ hasText: /\d{4}$/ })).toBeVisible();
+  await page.locator('section[aria-label="Day and time"] ul.grid-cols-3 a').first().click();
+  await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
   await page.getByLabel('Your name').fill('Playwright Test');
   await page.getByLabel('Mobile number').fill(TEST_PHONE);
   await page.getByLabel('On WhatsApp').uncheck();
@@ -51,6 +56,7 @@ test('a customer books, changes the time, then cancels', async ({ page }) => {
   await page.getByRole('link', { name: 'Change time' }).click();
   await expect(page.getByRole('heading', { name: 'Choose a new time' })).toBeVisible();
   await page.getByRole('link', { name: /times free/ }).nth(1).click();
+  await expect(page.getByRole('heading', { level: 2 }).filter({ hasText: /\d{4}$/ })).toBeVisible();
   await page.locator('section[aria-label="Day and time"] ul.grid-cols-3 a').first().click();
   await page.getByRole('button', { name: 'Confirm new time' }).click();
   await expect(page.getByText('Done: your booking has moved')).toBeVisible();
@@ -68,7 +74,9 @@ test('a customer books, changes the time, then cancels', async ({ page }) => {
 test('the booking form explains mistakes and keeps what was typed', async ({ page }) => {
   await page.goto('/book?service=trim&staff=any');
   await page.getByRole('link', { name: /times free/ }).first().click();
+  await expect(page.getByRole('heading', { level: 2 }).filter({ hasText: /\d{4}$/ })).toBeVisible();
   await page.locator('section[aria-label="Day and time"] ul.grid-cols-3 a').first().click();
+  await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
   await page.getByLabel('Your name').fill('Playwright Test');
   await page.getByLabel('Mobile number').fill('12345');
   await page.getByRole('button', { name: 'Confirm booking' }).click();
