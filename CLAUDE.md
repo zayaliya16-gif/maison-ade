@@ -28,7 +28,8 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
 - Signature: `Wordmark` draws the é accent as a brass crown (Adé = crown in Yoruba). Keep it the one bold element; everything else quiet.
 - All salon data (services with minutes + priceKobo, staff and which services they do, opening hours) lives in `src/config/salon.js`. Everything is DEMO data; the footer says the salon is made up.
 - Money in kobo; display with `naira()` in `src/lib/format.js` (hand-formatted so server and browser match).
-- Database: Supabase, server-only. `db()` in `src/lib/supabase.js` uses `SUPABASE_URL` + `SUPABASE_SECRET_KEY` from `.env.local` (template `.env.example`); `npm run db:check` tests it. Browsers never get a Supabase key.
+- Database: Supabase, server-only. `db()` in `src/lib/supabase.js` uses `SUPABASE_URL` + `SUPABASE_SECRET_KEY` from `.env.local` (template `.env.example`); `npm run db:check` tests it locally; live: https://maison-ade.vercel.app/api/health (yes/no only, never values). Browsers never get a Supabase key.
+  Vercel env vars only apply after a NEW deploy (push an empty commit).
   Schema in `supabase/migrations/*.sql` (owner pastes into the Supabase SQL Editor; no CLI). RLS on, no policies, anon/authenticated revoked.
   This project does NOT auto-grant new tables: every new table needs `grant ... to service_role` (see 0002) or the server gets "permission denied".
   `bookings.no_double_booking` exclusion constraint makes overlaps impossible in the DB (error 23P01 = slot taken).
