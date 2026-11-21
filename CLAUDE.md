@@ -7,8 +7,8 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
 ## Status
 - Phase 1 (setup + design) done: homepage with menu, stylists, hours; `/book` is a placeholder.
 - Live at https://maison-ade.vercel.app (GitHub zayaliya16-gif/maison-ade, Vercel auto-deploys from `main`).
-- Next: phase 2 availability engine (staff, services, working hours, time off, bookings; overlap-proof in the DB), then
-  3 customer booking, 4 manage links + staff calendar, 5 email (Resend) + WhatsApp (Meta Cloud API test number) with a message log,
+- Phase 2 (availability engine) done: tables + overlap-proof bookings in Supabase, `findSlots()`, 21 tests passing.
+- Next: 3 customer booking (uses `findSlots()`; insert booking, treat error 23P01 as "slot just taken"), 4 manage links + staff calendar, 5 email (Resend) + WhatsApp (Meta Cloud API test number) with a message log,
   6 automatic reminders every 15 min (retries, never twice), 7 tests + security review + README + live.
 - "Done" rule for project 3+: input checks, error handling, tests, security checks, README.
 - Plan before building each phase; the owner says "start". Explain in plain language; the owner is learning.
@@ -25,6 +25,13 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
 - All salon data (services with minutes + priceKobo, staff and which services they do, opening hours) lives in `src/config/salon.js`. Everything is DEMO data; the footer says the salon is made up.
 - Money in kobo; display with `naira()` in `src/lib/format.js` (hand-formatted so server and browser match).
 - Database: Supabase, server-only. `db()` in `src/lib/supabase.js` uses `SUPABASE_URL` + `SUPABASE_SECRET_KEY` from `.env.local` (template `.env.example`); `npm run db:check` tests it. Browsers never get a Supabase key.
+  Schema in `supabase/migrations/*.sql` (owner pastes into the Supabase SQL Editor; no CLI). RLS on, no policies, anon/authenticated revoked.
+  This project does NOT auto-grant new tables: every new table needs `grant ... to service_role` (see 0002) or the server gets "permission denied".
+  `bookings.no_double_booking` exclusion constraint makes overlaps impossible in the DB (error 23P01 = slot taken).
+  `npm run db:seed` syncs services/staff/staff_services from `salon.js`; working hours only on first run (DB is the source after).
+- Availability: `src/lib/availability.js` is pure (no DB, fully unit-tested); `src/lib/schedule.js` `findSlots()` loads a day from the DB and calls it.
+  Rules (`bookingRules` in salon.js): 15-min steps, 2h notice, 60 days ahead, service must end by close.
+  Tests: `tests/availability.test.js` (pure) and `tests/database.test.js` (real DB, 2099 dates, cleans up after itself).
 - Times are Africa/Lagos (UTC+1 all year, no DST).
 - Security headers in `next.config.mjs`; Vercel functions in `lhr1` (`vercel.json`).
 - Git commits use the GitHub noreply email (repo-local config) so Vercel Hobby deploys them.

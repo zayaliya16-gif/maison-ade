@@ -69,3 +69,14 @@ export const staff = [
     services: ['brows', 'manicure', 'facial', 'pedicure'],
   },
 ];
+
+// How online booking works. Used by the availability engine (src/lib/availability.js).
+export const bookingRules = {
+  stepMinutes: 15, // start times every 15 minutes: 9:00, 9:15, 9:30...
+  minNoticeMinutes: 120, // can't book less than 2 hours ahead
+  maxDaysAhead: 60, // can't book more than 60 days ahead
+};
+
+// DEMO: each stylist's regular day off (0 = Sunday). They work the salon's opening hours on every other open day.
+// Only used to fill the database the first time (`npm run db:seed`); after that the database is the source.
+export const demoDaysOff = { tolu: [0], ifeoma: [3], kemi: [2], zainab: [4] };
