@@ -94,3 +94,19 @@ test('one phone number can have at most 3 upcoming bookings', { skip }, async ()
   const fourth = await lib.createBooking({ serviceId: 'trim', staffChoice: 'ifeoma', date, time: slots[11].time, customer });
   assert.deepEqual(fourth, { ok: false, reason: 'limit' });
 });
+
+test('one place (visitor) can make at most 5 bookings an hour, even with different phone numbers', { skip }, async () => {
+  const visitor = 'f'.repeat(64); // a made-up fingerprint
+  const phones = ['+99900000011', '+99900000012', '+99900000013', '+99900000014', '+99900000015', '+99900000016'];
+  try {
+    const { date, slots } = await freeDay('ifeoma', 14);
+    for (let i = 0; i < 5; i++) {
+      const r = await lib.createBooking({ serviceId: 'trim', staffChoice: 'ifeoma', date, time: slots[i * 2].time, customer: { ...customer, phone: phones[i] }, visitor });
+      assert.equal(r.ok, true, `booking ${i + 1}`);
+    }
+    const sixth = await lib.createBooking({ serviceId: 'trim', staffChoice: 'ifeoma', date, time: slots[12].time, customer: { ...customer, phone: phones[5] }, visitor });
+    assert.deepEqual(sixth, { ok: false, reason: 'busy' });
+  } finally {
+    await supabase.from('bookings').delete().in('customer_phone', phones);
+  }
+});

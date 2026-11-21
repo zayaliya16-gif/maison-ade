@@ -135,3 +135,16 @@ test('5 wrong passwords lock that visitor out, even with the right password', { 
   assert.deepEqual(await attempt('guess'), { ok: false, reason: 'locked' }, 'fifth wrong try locks');
   assert.deepEqual(await attempt('the-real-password'), { ok: false, reason: 'locked' }, 'locked even with the right password');
 });
+
+test('30 wrong passwords from anywhere pause all logins (stops guessing from many addresses)', { skip }, async () => {
+  const others = Array.from({ length: 30 }, () => randomBytes(32).toString('hex'));
+  try {
+    // 30 failures from 30 different made-up places (one each, so no single place is locked)
+    const { error } = await supabase.from('login_attempts').insert(others.map((ip_hash) => ({ ip_hash, succeeded: false })));
+    assert.equal(error, null, error?.message);
+    const fresh = await lib.checkPasswordAttempt({ fingerprint: TEST_FINGERPRINT, given: 'the-real-password', actual: 'the-real-password' });
+    assert.deepEqual(fresh, { ok: false, reason: 'locked' });
+  } finally {
+    await supabase.from('login_attempts').delete().in('ip_hash', others); // unlock straight away
+  }
+});

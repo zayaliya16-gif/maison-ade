@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 import { notify } from '@/lib/messages/outbox.js';
 import { createBooking, MAX_UPCOMING_PER_PHONE } from '@/lib/booking.js';
+import { visitorFingerprint } from '@/lib/visitor.js';
 import { parseCustomer } from '@/lib/booking-input.js';
 import { parseDate } from '@/lib/availability.js';
 import { salon } from '@/config/salon.js';
@@ -36,7 +37,10 @@ export async function submitBooking(previous, formData) {
 
   let result;
   try {
-    result = await createBooking({ serviceId: choice.service, staffChoice: choice.staff, date: choice.date, time: choice.time, customer: parsed.customer });
+    result = await createBooking({
+      serviceId: choice.service, staffChoice: choice.staff, date: choice.date, time: choice.time,
+      customer: parsed.customer, visitor: await visitorFingerprint('booking'),
+    });
   } catch (error) {
     console.error('Booking failed', error); // shows in the Vercel logs, never to the customer
     return fail({ message: `We couldn’t save your booking just now. Please try again in a minute, or call us on ${salon.phoneDisplay}.` });
@@ -47,6 +51,10 @@ export async function submitBooking(previous, formData) {
   }
   if (!result.ok && result.reason === 'limit') {
     return fail({ message: `This phone number already has ${MAX_UPCOMING_PER_PHONE} upcoming bookings. To book more, please call us on ${salon.phoneDisplay}.` });
+  }
+
+  if (!result.ok && result.reason === 'busy') {
+    return fail({ message: `Lots of bookings have just been made from your connection. Please try again in an hour, or call us on ${salon.phoneDisplay}.` });
   }
 
   // Booked: send the confirmation after the page has responded, so the customer never waits for email/WhatsApp

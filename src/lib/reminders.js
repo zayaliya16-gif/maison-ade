@@ -70,5 +70,10 @@ export async function runReminders({ now = new Date(), senders } = {}) {
     count(await deliver(m.id, senders, now));
   }
 
+  // 4. Privacy: booking fingerprints are only needed for the 1-hour limit, so forget them after 2 days
+  const { error: tidyError } = await supabase.from('bookings').update({ ip_hash: null })
+    .not('ip_hash', 'is', null).lt('created_at', new Date(now.getTime() - 48 * 60 * MINUTE).toISOString());
+  if (tidyError) throw tidyError;
+
   return summary;
 }

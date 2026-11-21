@@ -9,6 +9,7 @@ import { bookingRules } from '../config/salon.js';
 // Creating bookings and looking them up by their private link.
 
 export const MAX_UPCOMING_PER_PHONE = 3;
+export const MAX_BOOKINGS_PER_VISITOR_PER_HOUR = 5;
 const SLOT_TAKEN = '23P01'; // Postgres: the no_double_booking rule refused it
 
 /** The private link code is shown to the customer once; the database only keeps its fingerprint (hash). */
@@ -35,9 +36,10 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, written in URL-safe 
  * @param {string} p.date         "YYYY-MM-DD" (Lagos)
  * @param {string} p.time         "HH:MM" (Lagos)
  * @param {object} p.customer     from parseCustomer(): { name, phone, email, whatsappOptIn, emailOptIn }
- * @returns {Promise<{ ok: true, token: string, bookingId: string } | { ok: false, reason: 'taken' | 'limit' }>}
+ * @param {string} [p.visitor]    a fingerprint of where the request came from (limits junk bookings from one place)
+ * @returns {Promise<{ ok: true, token: string, bookingId: string } | { ok: false, reason: 'taken' | 'limit' | 'busy' }>}
  */
-export async function createBooking({ serviceId, staffChoice, date, time, customer }) {
+export async function createBooking({ serviceId, staffChoice, date, time, customer, visitor }) {
   const supabase = db();
   const service = await getService(serviceId);
   if (!service) return { ok: false, reason: 'taken' };
@@ -53,6 +55,15 @@ export async function createBooking({ serviceId, staffChoice, date, time, custom
     .eq('customer_phone', customer.phone).eq('status', 'confirmed').gt('starts_at', new Date().toISOString());
   if (countError) throw countError;
   if (count >= MAX_UPCOMING_PER_PHONE) return { ok: false, reason: 'limit' };
+
+  // No more than 5 bookings an hour from one place, so made-up phone numbers can't fill the diary
+  if (visitor) {
+    const { count: recent, error: recentError } = await supabase.from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip_hash', visitor).gt('created_at', new Date(Date.now() - 3_600_000).toISOString());
+    if (recentError) throw recentError;
+    if (recent >= MAX_BOOKINGS_PER_VISITOR_PER_HOUR) return { ok: false, reason: 'busy' };
+  }
 
   // Who to try, in order: the chosen stylist, or for "any" whoever has the fewest bookings that day
   let candidates = slot.staffIds;
@@ -82,6 +93,7 @@ export async function createBooking({ serviceId, staffChoice, date, time, custom
       whatsapp_opt_in: customer.whatsappOptIn,
       email_opt_in: customer.emailOptIn,
       manage_token_hash: hashToken(token),
+      ip_hash: visitor ?? null,
     });
     if (!error) return { ok: true, token, bookingId };
     if (error.code !== SLOT_TAKEN) throw error;

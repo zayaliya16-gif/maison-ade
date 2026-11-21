@@ -4,7 +4,26 @@ import { fileURLToPath } from 'node:url';
 const securityHeaders = [
   // Nobody can show this site inside a frame on their own site (stops "clickjacking")
   { key: 'X-Frame-Options', value: 'DENY' },
-  { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+  // Content Security Policy: the browser only runs scripts, styles, fonts and images from our own site,
+  // only sends forms to our own site, and never lets other sites frame us. ('unsafe-inline' is needed for the
+  // small scripts Next.js puts in each page; external scripts are still blocked. 'unsafe-eval' only in development.)
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'"}`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data:",
+      "font-src 'self'",
+      "connect-src 'self'",
+      "form-action 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+    ].join('; '),
+  },
+  // Pages we open in a new tab (WhatsApp links) can't reach back into ours
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
   // Browsers must trust our file types instead of guessing (blocks a class of attacks)
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   // Other sites only learn our domain when someone clicks a link, not the full page address

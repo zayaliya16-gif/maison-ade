@@ -30,12 +30,17 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
   retries with backoff (`retryDue`), stuck 'sending' >10 min: email retried (Resend idempotency), WhatsApp NOT (never twice).
   `deliver()` skips stale messages (cancelled / moved / time passed). WhatsApp webhook `/api/webhooks/whatsapp` (signed with
   WHATSAPP_APP_SECRET, verify token WHATSAPP_WEBHOOK_VERIFY_TOKEN) fills messages.delivery. Meta steps: `docs/whatsapp-setup.md`.
-- Next: 7 tests + security review + README + live.
+- Phase 7 (tests + security + README) done: per-visitor booking cap 5/h (`src/lib/visitor.js` fingerprint, `bookings.ip_hash`,
+  cleared after 2 days by the cron), global login cap 30 fails / 15 min, public `/api/health` = ok only (details for staff),
+  CSP + COOP headers, postcss pinned via `overrides` (npm audit 0). `tests/lockdown.test.js` needs SUPABASE_PUBLISHABLE_KEY (skips otherwise).
+  Browser tests: `npm run test:e2e` (Playwright, e2e/, port 3200); live: `E2E_BASE_URL=https://maison-ade.vercel.app npx playwright test`.
+- PROJECT COMPLETE. Possible next: "Find my bookings" via WhatsApp code, per-stylist logins, real WhatsApp number + email domain.
 - "Done" rule for project 3+: input checks, error handling, tests, security checks, README.
 - Plan before building each phase; the owner says "start". Explain in plain language; the owner is learning.
 
 ## Commands
-- `npm run dev` (localhost:3000), `npm run build`, `npm start`, `npm test` (Node test runner, `tests/`)
+- `npm run dev` (localhost:3000), `npm run build`, `npm start`, `npm test` (Node test runner, `tests/`), `npm run test:e2e` (Playwright)
+- `npm run db:check`, `npm run db:seed`, `npm run msg:test -- [hello] <phone> <email>`
 
 ## Architecture
 - Next.js 15 App Router (`src/app`) + React 19, Tailwind v4 via `@tailwindcss/postcss`. Node 22 (`engines` in package.json, so Vercel matches).

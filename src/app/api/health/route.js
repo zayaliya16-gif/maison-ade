@@ -1,7 +1,9 @@
 import { db } from '@/lib/supabase.js';
+import { isStaff } from '@/lib/staff-auth.js';
 
 // Health check: is the live server set up and can it reach the database?
-// Reports only yes/no and the KIND of key, never the key or any customer data.
+// The public only sees ok / not ok. Logged-in staff also see which setting is wrong (yes/no and the KIND of key,
+// never the key itself or any customer data).
 export const dynamic = 'force-dynamic';
 
 function keyKind(key) {
@@ -33,5 +35,6 @@ export async function GET() {
     report.database = `error: ${error.message}`;
   }
   const ok = report.database === 'ok';
-  return Response.json({ ok, ...report }, { status: ok ? 200 : 503, headers: { 'Cache-Control': 'no-store' } });
+  const body = (await isStaff()) ? { ok, ...report } : { ok, details: 'Log in at /staff to see details.' };
+  return Response.json(body, { status: ok ? 200 : 503, headers: { 'Cache-Control': 'no-store' } });
 }

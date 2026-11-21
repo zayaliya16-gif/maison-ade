@@ -1,6 +1,6 @@
 import 'server-only';
-import { createHash } from 'node:crypto';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
+import { visitorFingerprint } from './visitor.js';
 import { redirect } from 'next/navigation';
 import { sessionKey, signSession, verifySession } from './session.js';
 import { checkPasswordAttempt } from './login-attempts.js';
@@ -34,19 +34,11 @@ export async function requireStaff() {
   if (!(await isStaff())) redirect('/staff/login');
 }
 
-/** A scrambled fingerprint of where a request comes from (we never store the address itself) */
-async function visitorFingerprint() {
-  const h = await headers();
-  // On Vercel, x-forwarded-for is set by Vercel itself, so visitors can't fake it
-  const ip = (h.get('x-forwarded-for') ?? '').split(',')[0].trim() || h.get('x-real-ip') || 'unknown';
-  return createHash('sha256').update(`maison-ade login\n${process.env.SUPABASE_SECRET_KEY}\n${ip}`).digest('hex');
-}
-
 /** @returns {Promise<{ ok: true } | { ok: false, reason: 'not-set-up' | 'wrong' | 'locked' }>} */
 export async function logIn(given) {
   const s = settings();
   if (!s) return { ok: false, reason: 'not-set-up' };
-  const result = await checkPasswordAttempt({ fingerprint: await visitorFingerprint(), given, actual: s.password });
+  const result = await checkPasswordAttempt({ fingerprint: await visitorFingerprint('login'), given, actual: s.password });
   if (!result.ok) return result;
 
   (await cookies()).set(COOKIE, signSession(Date.now() + SESSION_HOURS * 3_600_000, s.key), {
