@@ -12,7 +12,13 @@ The owner's curriculum lives in `../animated website/CURRICULUM.md`; project 1-2
   `createBooking()` in `src/lib/booking.js` (re-checks slot, 3 upcoming per phone, "any" = least busy, retries next stylist on 23P01).
   Private page `/b/[token]` (+ `/calendar` .ics): random 32-byte token, only its SHA-256 stored. Input checks in `src/lib/booking-input.js`.
   Tests use phone `+999...` (not a real country) and clean up. `npm test` runs with `--conditions=react-server` so server-only code is testable.
-- Next: 4 manage links + staff calendar, 5 email (Resend) + WhatsApp (Meta Cloud API test number) with a message log,
+- Phase 4 (manage + staff) done: `/b/[token]` cancel + `/b/[token]/change` move (one UPDATE, same service + stylist,
+  `ignoreBookingId` so it can overlap its own old time; online until `changeCutoffMinutes` = 2h before).
+  `/staff` diary (day view, time off with clash warning, staff cancel) behind shared `STAFF_PASSWORD` (12+ chars, env var):
+  signed 12h cookie (`src/lib/session.js`, key = hash of SUPABASE_SECRET_KEY + password), lockout 5 fails / 15 min per hashed IP
+  (`src/lib/login-attempts.js`, table `login_attempts`). Every staff page/action calls `requireStaff()`. Day/time picker shared: `SlotPicker`.
+  Tests run files one at a time (`--test-concurrency=1`): DB tests book the same stylists and would clash.
+- Next: 5 email (Resend) + WhatsApp (Meta Cloud API test number) with a message log,
   6 automatic reminders every 15 min (retries, never twice), 7 tests + security review + README + live.
 - "Done" rule for project 3+: input checks, error handling, tests, security checks, README.
 - Plan before building each phase; the owner says "start". Explain in plain language; the owner is learning.

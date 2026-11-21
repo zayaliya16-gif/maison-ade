@@ -20,9 +20,10 @@ export async function getService(serviceId) {
  * @param {string}   p.serviceId  e.g. "silk-press"
  * @param {string}   [p.staffId]  a specific stylist, or leave out for "any stylist"
  * @param {string[]} p.dates      "YYYY-MM-DD" days (Lagos), in order
+ * @param {string}   [p.ignoreBookingId]  leave this booking out (when moving it, its own old time shouldn't block the new one)
  * @returns {Promise<Map<string, Array>>} date → slots (see getAvailableSlots)
  */
-export async function findSlotsForDays({ serviceId, staffId, dates }) {
+export async function findSlotsForDays({ serviceId, staffId, dates, ignoreBookingId }) {
   const supabase = db();
   const result = new Map(dates.map((d) => [d, []]));
   if (dates.length === 0) return result;
@@ -44,7 +45,11 @@ export async function findSlotsForDays({ serviceId, staffId, dates }) {
   const [hours, timeOff, bookings] = await Promise.all([
     supabase.from('working_hours').select('staff_id, weekday, starts, ends').in('staff_id', staffIds),
     supabase.from('time_off').select('staff_id, starts_at, ends_at').in('staff_id', staffIds).lt('starts_at', to).gt('ends_at', from),
-    supabase.from('bookings').select('staff_id, starts_at, ends_at').in('staff_id', staffIds).eq('status', 'confirmed').lt('starts_at', to).gt('ends_at', from),
+    (() => {
+      let q = supabase.from('bookings').select('staff_id, starts_at, ends_at').in('staff_id', staffIds).eq('status', 'confirmed').lt('starts_at', to).gt('ends_at', from);
+      if (ignoreBookingId) q = q.neq('id', ignoreBookingId);
+      return q;
+    })(),
   ]);
   for (const r of [hours, timeOff, bookings]) if (r.error) throw r.error;
 
@@ -60,6 +65,6 @@ export async function findSlotsForDays({ serviceId, staffId, dates }) {
 }
 
 /** Free slots for one day. Same options as findSlotsForDays, with `date` instead of `dates`. */
-export async function findSlots({ date, serviceId, staffId }) {
-  return (await findSlotsForDays({ serviceId, staffId, dates: [date] })).get(date);
+export async function findSlots({ date, serviceId, staffId, ignoreBookingId }) {
+  return (await findSlotsForDays({ serviceId, staffId, dates: [date], ignoreBookingId })).get(date);
 }

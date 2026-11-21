@@ -75,6 +75,7 @@ export const bookingRules = {
   stepMinutes: 15, // start times every 15 minutes: 9:00, 9:15, 9:30...
   minNoticeMinutes: 120, // can't book less than 2 hours ahead
   maxDaysAhead: 60, // can't book more than 60 days ahead
+  changeCutoffMinutes: 120, // customers can change or cancel online until 2 hours before; after that they call
 };
 
 // DEMO: each stylist's regular day off (0 = Sunday). They work the salon's opening hours on every other open day.

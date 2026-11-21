@@ -19,6 +19,7 @@ export async function GET() {
   const report = {
     SUPABASE_URL: !url ? 'missing' : /^https:\/\/[a-z0-9]+\.supabase\.co\/?$/.test(url) ? 'looks right' : 'set, but not in the form https://xxxx.supabase.co',
     SUPABASE_SECRET_KEY: keyKind(process.env.SUPABASE_SECRET_KEY),
+    STAFF_PASSWORD: !process.env.STAFF_PASSWORD ? 'missing' : process.env.STAFF_PASSWORD.length < 12 ? 'too short (needs 12+ characters)' : 'set',
     database: 'not tried',
   };
   try {

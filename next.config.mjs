@@ -20,7 +20,17 @@ const nextConfig = {
   // There's a stray package-lock.json in the home folder; tell Next this folder is the project.
   outputFileTracingRoot: fileURLToPath(new URL('.', import.meta.url)),
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    // Private pages (customer links, staff diary): never in search engines, never kept in shared caches
+    const privateHeaders = [
+      { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+      { key: 'Cache-Control', value: 'private, no-store' },
+    ];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      { source: '/b/:path*', headers: privateHeaders },
+      { source: '/staff/:path*', headers: privateHeaders },
+      { source: '/staff', headers: privateHeaders },
+    ];
   },
 };
 

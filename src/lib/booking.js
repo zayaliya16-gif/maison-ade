@@ -4,6 +4,7 @@ import { db } from './supabase.js';
 import { findSlots, getService } from './schedule.js';
 import { lagosDayRange } from './availability.js';
 import { rankStylists } from './booking-input.js';
+import { bookingRules } from '../config/salon.js';
 
 // Creating bookings and looking them up by their private link.
 
@@ -11,7 +12,7 @@ export const MAX_UPCOMING_PER_PHONE = 3;
 const SLOT_TAKEN = '23P01'; // Postgres: the no_double_booking rule refused it
 
 /** The private link code is shown to the customer once; the database only keeps its fingerprint (hash). */
-const hashToken = (token) => createHash('sha256').update(token).digest('hex');
+export const hashToken = (token) => createHash('sha256').update(token).digest('hex');
 const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, written in URL-safe letters
 
 /**
@@ -82,9 +83,62 @@ export async function createBooking({ serviceId, staffChoice, date, time, custom
 export async function getBookingByToken(token) {
   if (!TOKEN_RE.test(String(token))) return null;
   const { data, error } = await db().from('bookings')
-    .select('id, starts_at, ends_at, status, customer_name, customer_phone, customer_email, whatsapp_opt_in, email_opt_in, price_kobo, service:services(id, name, minutes), stylist:staff(id, name)')
+    .select('id, staff_id, service_id, starts_at, ends_at, status, cancelled_by, moved_at, customer_name, customer_phone, customer_email, whatsapp_opt_in, email_opt_in, price_kobo, service:services(id, name, minutes), stylist:staff(id, name)')
     .eq('manage_token_hash', hashToken(token))
     .maybeSingle();
   if (error) throw error;
   return data;
+}
+
+/** Can the customer still change or cancel online? (Until 2 hours before; after that they call the salon.) */
+export function canChangeOnline(booking, now = new Date()) {
+  return booking.status === 'confirmed'
+    && new Date(booking.starts_at).getTime() - now.getTime() >= bookingRules.changeCutoffMinutes * 60_000;
+}
+
+/**
+ * Customer cancels from their private link.
+ * @returns {Promise<{ ok: true } | { ok: false, reason: 'not-found' | 'already-cancelled' | 'too-late' }>}
+ */
+export async function cancelByToken(token) {
+  const booking = await getBookingByToken(token);
+  if (!booking) return { ok: false, reason: 'not-found' };
+  if (booking.status !== 'confirmed') return { ok: false, reason: 'already-cancelled' };
+  if (!canChangeOnline(booking)) return { ok: false, reason: 'too-late' };
+  return cancelBooking(booking.id, 'customer');
+}
+
+/** Cancels a booking (customer or staff). Only touches it if it's still confirmed, so a double click is harmless. */
+export async function cancelBooking(bookingId, by) {
+  const { data, error } = await db().from('bookings')
+    .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_by: by })
+    .eq('id', bookingId).eq('status', 'confirmed')
+    .select('id');
+  if (error) throw error;
+  return data.length ? { ok: true } : { ok: false, reason: 'already-cancelled' };
+}
+
+/**
+ * Customer moves their booking to another time (same service, same stylist).
+ * It's one database update, so it either fully happens or doesn't: they can never lose the old time without getting the new one.
+ * @returns {Promise<{ ok: true } | { ok: false, reason: 'not-found' | 'already-cancelled' | 'too-late' | 'taken' }>}
+ */
+export async function moveByToken(token, { date, time }) {
+  const booking = await getBookingByToken(token);
+  if (!booking) return { ok: false, reason: 'not-found' };
+  if (booking.status !== 'confirmed') return { ok: false, reason: 'already-cancelled' };
+  if (!canChangeOnline(booking)) return { ok: false, reason: 'too-late' };
+
+  // Free times for their stylist, not counting their own current booking (so "30 minutes later" works)
+  const slots = await findSlots({ date, serviceId: booking.service_id, staffId: booking.staff_id, ignoreBookingId: booking.id });
+  const slot = slots.find((s) => s.time === time);
+  if (!slot) return { ok: false, reason: 'taken' };
+
+  const { data, error } = await db().from('bookings')
+    .update({ starts_at: slot.startsAt, ends_at: slot.endsAt, moved_at: new Date().toISOString() })
+    .eq('id', booking.id).eq('status', 'confirmed')
+    .select('id');
+  if (error?.code === SLOT_TAKEN) return { ok: false, reason: 'taken' };
+  if (error) throw error;
+  return data.length ? { ok: true } : { ok: false, reason: 'already-cancelled' };
 }
