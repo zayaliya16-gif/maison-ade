@@ -11,7 +11,8 @@
     "db:check": "node --env-file=.env.local scripts/check-db.mjs",
     "db:seed": "node --env-file=.env.local scripts/seed.mjs",
     "msg:test": "node --env-file=.env.local scripts/test-message.mjs",
-    "test:e2e": "next build && playwright test"
+    "test:e2e": "next build && playwright test",
+    "token:extend": "node --env-file=.env.local scripts/long-lived-token.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",
